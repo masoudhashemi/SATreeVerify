@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
+from utils import box_intersection
 from z3 import *
 
 XMIN = -np.inf
@@ -43,15 +44,6 @@ def insert_val(l, index, value, fill=-1):
         while (len(l)) < index:
             l.append(fill)
         l.append(value)
-
-
-def box_intersection(mini, minj, maxi, maxj):
-    maxm = np.maximum(mini[:, :, None], minj.T[None, :, :])
-    minm = np.minimum(maxi[:, :, None], maxj.T[None, :, :])
-    # It looks like min > max, but these are for u, l
-    check = np.all(((minm - maxm) > 0), axis=1)
-
-    return check
 
 
 def get_ens_thresh(dump):
