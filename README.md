@@ -1,7 +1,3 @@
-This folder include examples for end-to-end propositional formulation of RandomForest Classifiers. 
+# Verifying Ensemble Tree using SAT
 
-There are three main experiments included in this folder:
-
-1. RandomForest encoding
-2. CNF conversion and SAT Solver benchmarking (z3 with SMT2 v. MapleCMS with CNF encoding)
-3. Finding a lower bound: this is mostly base on adding extra conditions and heuristics to reduce the search space. 
+This code implements a method to represent ensemble trees (XGBoost and RanomForest) with propsitional logic. We then use this representation to test the robustness of the models using SAT (using Z3 solver).
