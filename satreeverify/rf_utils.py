@@ -1,7 +1,8 @@
+from collections import OrderedDict
+
 import numpy as np
 import pandas as pd
 from sklearn.tree import _tree
-from collections import OrderedDict
 from z3 import *
 
 
@@ -148,7 +149,9 @@ def create_x_conditions(var_x, all_thresh):
     feature_nums = set([v[0] for v in all_thresh])
     x_conds = []
     for fi in feature_nums:
-        thresh_list = sorted(list(set([v[1] for v in all_thresh if v[0] == fi])))
+        thresh_list = sorted(
+            list(set([v[1] for v in all_thresh if v[0] == fi]))
+        )
         for thi in range(1, len(thresh_list)):
             x_conds.append(
                 z3.Implies(
@@ -182,10 +185,20 @@ def linf_sample(sample, epsilon):
     for i in range(sample.shape[1]):
         if sample[0, i] != 0:
             maxi.append(
-                np.max([sample[0, i] * (1 - epsilon), sample[0, i] * (1 + epsilon)])
+                np.max(
+                    [
+                        sample[0, i] * (1 - epsilon),
+                        sample[0, i] * (1 + epsilon),
+                    ]
+                )
             )
             mini.append(
-                np.min([sample[0, i] * (1 - epsilon), sample[0, i] * (1 + epsilon)])
+                np.min(
+                    [
+                        sample[0, i] * (1 - epsilon),
+                        sample[0, i] * (1 + epsilon),
+                    ]
+                )
             )
         else:
             maxi.append(epsilon)
@@ -313,10 +326,14 @@ def find_linf_tree_intersect(tree, sample, epsilon):
     mini = []
     for i in range(sample.shape[1]):
         maxi.append(
-            np.max([sample[0, i] * (1 - epsilon), sample[0, i] * (1 + epsilon)])
+            np.max(
+                [sample[0, i] * (1 - epsilon), sample[0, i] * (1 + epsilon)]
+            )
         )
         mini.append(
-            np.min([sample[0, i] * (1 - epsilon), sample[0, i] * (1 + epsilon)])
+            np.min(
+                [sample[0, i] * (1 - epsilon), sample[0, i] * (1 + epsilon)]
+            )
         )
 
     mini = np.asarray(mini).reshape(1, -1)
@@ -337,7 +354,7 @@ def get_output(opt, c_weights):
     return adv_weights
 
 
-def create_all_smt(clf, var_x, sample, epsilon, lower_bound = False):
+def create_all_smt(clf, var_x, sample, epsilon, lower_bound=False):
     predict = clf.predict(sample)[0]
     print(predict)
 
@@ -397,7 +414,7 @@ def create_all_smt(clf, var_x, sample, epsilon, lower_bound = False):
                     core_constraints.add(Not(ci[0]))
             else:
                 core_constraints.add(ci)
-    
+
     if not lower_bound:
         core_constraints.add(Not(And(not_cs)))
 
@@ -460,9 +477,15 @@ def sum_loop(xin, c_, n):
                 constraints.add(d[(0, i)] == And(c_[0], xh[(0, i)]))
 
         for i in range(1, n + 1):
-            cons = xh[(seq_num, i)] if x_[seq_num][i - 1] else Not(xh[(seq_num, i)])
+            cons = (
+                xh[(seq_num, i)]
+                if x_[seq_num][i - 1]
+                else Not(xh[(seq_num, i)])
+            )
             constraints.add(cons)
-            constraints.add(x[(seq_num, i)] == And(c_[seq_num], xh[(seq_num, i)]))
+            constraints.add(
+                x[(seq_num, i)] == And(c_[seq_num], xh[(seq_num, i)])
+            )
 
             constraints.add(
                 (
@@ -478,7 +501,10 @@ def sum_loop(xin, c_, n):
             constraints.add(
                 (
                     d[(seq_num, i)]
-                    == (x[(seq_num, i)] == (d[(seq_num - 1, i)] == c[(seq_num, i)]))
+                    == (
+                        x[(seq_num, i)]
+                        == (d[(seq_num - 1, i)] == c[(seq_num, i)])
+                    )
                 )
             )
     return constraints, len(x_) - 1
@@ -580,7 +606,9 @@ def hard_attack(clf, sample, epsilon, var_x, nbits):
 
 
 def get_x_adv(solver, var_x, sample):
-    x_adv = pd.DataFrame(({k[2:-1]: [solver.model()[v]] for k, v in var_x.items()}))
+    x_adv = pd.DataFrame(
+        ({k[2:-1]: [solver.model()[v]] for k, v in var_x.items()})
+    )
     x_adv_sample, compare = create_adv_sample(x_adv, sample)
     return x_adv, x_adv_sample, compare
 
@@ -600,7 +628,9 @@ def create_adv_sample(x_adv, sample):
     bound_i = []
 
     for i in range(num_features):
-        col_i = np.asarray([ci for ci in columns if int(ci.split("_")[0]) == i])
+        col_i = np.asarray(
+            [ci for ci in columns if int(ci.split("_")[0]) == i]
+        )
         col_i_false = col_i[np.where(x_adv[col_i].values == False)[1]]
         col_i_true = col_i[np.where(x_adv[col_i].values == True)[1]]
 

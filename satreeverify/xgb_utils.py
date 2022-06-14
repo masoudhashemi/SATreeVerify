@@ -1,7 +1,8 @@
-import numpy as np
-import pandas as pd
 import json
 from collections import OrderedDict
+
+import numpy as np
+import pandas as pd
 from z3 import *
 
 XMIN = -np.inf
@@ -167,7 +168,7 @@ def get_lineage_(left, right, features, threshold, value):
         elif child in right:
             parent = np.where(right == child)[0].item()
             split = "r"
-            
+
         lineage.append([parent, split, threshold[parent], features[parent]])
 
         if parent == 0:
@@ -247,7 +248,9 @@ def get_branches(tree):
             else:
                 raise ValueError("node ids do not match!")
 
-            lineage.append([parent, split, threshold, feature, tree["yes"], tree["no"]])
+            lineage.append(
+                [parent, split, threshold, feature, tree["yes"], tree["no"]]
+            )
             _dfs(left_subtree, lineage, split="l")
             _dfs(right_subtree, lineage, split="r")
 
@@ -381,7 +384,9 @@ def create_x_conditions(var_x, all_thresh):
     feature_nums = set([v[0] for v in all_thresh])
     x_conds = []
     for fi in feature_nums:
-        thresh_list = sorted(list(set([v[1] for v in all_thresh if v[0] == fi])))
+        thresh_list = sorted(
+            list(set([v[1] for v in all_thresh if v[0] == fi]))
+        )
         for thi in range(1, len(thresh_list)):
             x_conds.append(
                 z3.Implies(
@@ -412,10 +417,20 @@ def linf_sample(sample, epsilon):
     for i in range(sample.shape[1]):
         if sample[0, i] != 0:
             maxi.append(
-                np.max([sample[0, i] * (1 - epsilon), sample[0, i] * (1 + epsilon)])
+                np.max(
+                    [
+                        sample[0, i] * (1 - epsilon),
+                        sample[0, i] * (1 + epsilon),
+                    ]
+                )
             )
             mini.append(
-                np.min([sample[0, i] * (1 - epsilon), sample[0, i] * (1 + epsilon)])
+                np.min(
+                    [
+                        sample[0, i] * (1 - epsilon),
+                        sample[0, i] * (1 + epsilon),
+                    ]
+                )
             )
         else:
             maxi.append(epsilon)
@@ -426,7 +441,7 @@ def linf_sample(sample, epsilon):
     return mini, maxi
 
 
-def create_all_smt(clf, var_x, sample, epsilon, lower_bound = False):
+def create_all_smt(clf, var_x, sample, epsilon, lower_bound=False):
     predict = clf.predict(sample)[0]
     print(predict)
 
@@ -458,20 +473,11 @@ def create_all_smt(clf, var_x, sample, epsilon, lower_bound = False):
 
         estimator = json.loads(estimator)
         branches = get_branches(estimator)
-        (
-            left,
-            right,
-            feature,
-            _,
-            value,
-        ) = get_tree_parts(branches)
+        (left, right, feature, _, value,) = get_tree_parts(branches)
 
-        (
-            leaves,
-            min_corners,
-            max_corners,
-            _,
-        ) = leaf_boxes(estimator, clf._features_count)
+        (leaves, min_corners, max_corners, _,) = leaf_boxes(
+            estimator, clf._features_count
+        )
 
         intersect_i = box_intersection(min_corners, mini, max_corners, maxi)
 
@@ -483,7 +489,6 @@ def create_all_smt(clf, var_x, sample, epsilon, lower_bound = False):
 
     # if there is no overlapping leaf, terminate the run
     remaining_c = set(all_c).difference(remove_c)
-
 
     not_cs = []
     for i, estimator in enumerate(_dump):
@@ -509,93 +514,95 @@ def create_all_smt(clf, var_x, sample, epsilon, lower_bound = False):
                     core_constraints.add(Not(ci[0]))
             else:
                 core_constraints.add(ci)
-    
+
     if not lower_bound:
         core_constraints.add(Not(And(not_cs)))
 
-    return list(core_constraints), list(soft_constraints), c_weights, orig_weights, all_c
+    return (
+        list(core_constraints),
+        list(soft_constraints),
+        c_weights,
+        orig_weights,
+        all_c,
+    )
 
 
 def binerize_val(val, nbits, nbitsnew, w):
-    
+
     wmin_ = w.min()
     wmax_ = w.max()
-    
+
     wmin = -1 * max(-wmin_, wmax_)
     wmax = max(-wmin_, wmax_)
-    
+
     if val > wmax:
         val = wmax
     elif val < wmin:
         val = wmin
-        
-    val_ = np.abs(val)/wmax
-    sgn_ = np.sign(val) if val!=0 else 1
-    
+
+    val_ = np.abs(val) / wmax
+    sgn_ = np.sign(val) if val != 0 else 1
+
     max_val = 2 ** (nbits) - 1
 
     val_ = int(val_ * max_val)
     val_b = [int(bi) for bi in "{0:b}".format(val_)]
     val_ = copy.deepcopy(val_b)
-    
+
     while len(val_) < nbitsnew:
         val_.insert(0, 0)
-        
+
     v = [bool(vi) for vi in val_]
 
-    
     if sgn_ == 1:
         v.insert(0, False)
     else:
         v.insert(0, True)
-    
+
     return v
 
 
 def list_c_val(c_weights, nbits, nbitsnew):
     list_c_ = []
     list_val_ = []
-    
-    w = np.asarray([v for k,v in c_weights.items()])
-    
+
+    w = np.asarray([v for k, v in c_weights.items()])
+
     for k, v in c_weights.items():
         list_val_.append(binerize_val(v, nbits, nbitsnew, w))
         list_c_.append(Bool(k))
-        
+
     return list_val_, list_c_
 
 
-
 def sum_loop_pos(xin, c_in, n):
-    
+
     x_ = []
     c_ = []
     for ci, xi in zip(c_in, xin):
         if not xi[0]:
             x_.append(xi[1:])
             c_.append(ci)
-    
+
     constraints = set()
     d = {}
     xh = {}
     for i in range(1, n + 1):
         d[(0, i)] = Bool(f"dsump_{0}({i})")
         xh[(0, i)] = Bool(f"xhsump_{0}({i})")
-    
-    if len(x_)==0:
+
+    if len(x_) == 0:
         for i in range(1, n + 1):
             constraints.add(Not(d[(0, i)]))
         return constraints, 0
-    
-    
-    if len(x_)==1:
+
+    if len(x_) == 1:
         for i in range(1, n + 1):
             cons = xh[(0, i)] if x_[0][i - 1] else Not(xh[(0, i)])
             constraints.add(cons)
             constraints.add(d[(0, i)] == And(c_[0], xh[(0, i)]))
         return constraints, 0
-    
-    
+
     c = {}
     x = {}
     for seq_num in range(1, len(x_)):
@@ -618,9 +625,15 @@ def sum_loop_pos(xin, c_in, n):
                 constraints.add(d[(0, i)] == And(c_[0], xh[(0, i)]))
 
         for i in range(1, n + 1):
-            cons = xh[(seq_num, i)] if x_[seq_num][i - 1] else Not(xh[(seq_num, i)])
+            cons = (
+                xh[(seq_num, i)]
+                if x_[seq_num][i - 1]
+                else Not(xh[(seq_num, i)])
+            )
             constraints.add(cons)
-            constraints.add(x[(seq_num, i)] == And(c_[seq_num], xh[(seq_num, i)]))
+            constraints.add(
+                x[(seq_num, i)] == And(c_[seq_num], xh[(seq_num, i)])
+            )
 
             constraints.add(
                 (
@@ -636,41 +649,43 @@ def sum_loop_pos(xin, c_in, n):
             constraints.add(
                 (
                     d[(seq_num, i)]
-                    == (x[(seq_num, i)] == (d[(seq_num - 1, i)] == c[(seq_num, i)]))
+                    == (
+                        x[(seq_num, i)]
+                        == (d[(seq_num - 1, i)] == c[(seq_num, i)])
+                    )
                 )
             )
     return constraints, len(x_) - 1
 
 
 def sum_loop_neg(xin, c_in, n):
-    
+
     x_ = []
     c_ = []
     for ci, xi in zip(c_in, xin):
         if xi[0]:
             x_.append(xi[1:])
             c_.append(ci)
-    
+
     constraints = set()
     d = {}
     xh = {}
     for i in range(1, n + 1):
         d[(0, i)] = Bool(f"dsumn_{0}({i})")
         xh[(0, i)] = Bool(f"xhsumn_{0}({i})")
-    
-    if len(x_)==0:
+
+    if len(x_) == 0:
         for i in range(1, n + 1):
             constraints.add(Not(d[(0, i)]))
         return constraints, 0
-    
-    
-    if len(x_)==1:
+
+    if len(x_) == 1:
         for i in range(1, n + 1):
             cons = xh[(0, i)] if x_[0][i - 1] else Not(xh[(0, i)])
             constraints.add(cons)
             constraints.add(d[(0, i)] == And(c_[0], xh[(0, i)]))
         return constraints, 0
-    
+
     c = {}
     x = {}
 
@@ -683,7 +698,6 @@ def sum_loop_neg(xin, c_in, n):
             x[(seq_num, i)] = Bool(f"xsumn_{seq_num}({i})")
             xh[(seq_num, i)] = Bool(f"xhsumn_{seq_num}({i})")
 
-
     for seq_num in range(1, len(x_)):
 
         constraints.add((Not(c[(seq_num, n)])))
@@ -695,9 +709,15 @@ def sum_loop_neg(xin, c_in, n):
                 constraints.add(d[(0, i)] == And(c_[0], xh[(0, i)]))
 
         for i in range(1, n + 1):
-            cons = xh[(seq_num, i)] if x_[seq_num][i - 1] else Not(xh[(seq_num, i)])
+            cons = (
+                xh[(seq_num, i)]
+                if x_[seq_num][i - 1]
+                else Not(xh[(seq_num, i)])
+            )
             constraints.add(cons)
-            constraints.add(x[(seq_num, i)] == And(c_[seq_num], xh[(seq_num, i)]))
+            constraints.add(
+                x[(seq_num, i)] == And(c_[seq_num], xh[(seq_num, i)])
+            )
 
             constraints.add(
                 (
@@ -713,7 +733,10 @@ def sum_loop_neg(xin, c_in, n):
             constraints.add(
                 (
                     d[(seq_num, i)]
-                    == (x[(seq_num, i)] == (d[(seq_num - 1, i)] == c[(seq_num, i)]))
+                    == (
+                        x[(seq_num, i)]
+                        == (d[(seq_num - 1, i)] == c[(seq_num, i)])
+                    )
                 )
             )
     return constraints, len(x_) - 1
@@ -722,11 +745,16 @@ def sum_loop_neg(xin, c_in, n):
 def const_larger(seq_nump, seq_numn, n):
 
     const = []
-    const_or = [And(Bool(f"dsump_{seq_nump}(1)"), Not(Bool(f"dsumn_{seq_nump}(1)")))]
+    const_or = [
+        And(Bool(f"dsump_{seq_nump}(1)"), Not(Bool(f"dsumn_{seq_nump}(1)")))
+    ]
     for i in range(1, n):
         const_and = []
         for j in range(i):
-            const_and.append(Bool(f"dsumn_{seq_numn}({j + 1})") == Bool(f"dsump_{seq_nump}({j + 1})"))
+            const_and.append(
+                Bool(f"dsumn_{seq_numn}({j + 1})")
+                == Bool(f"dsump_{seq_nump}({j + 1})")
+            )
         const_and.append(Bool(f"dsump_{seq_nump}({i + 1})"))
         const_and.append(Not(Bool(f"dsumn_{seq_numn}({i + 1})")))
 
@@ -738,9 +766,13 @@ def const_larger(seq_nump, seq_numn, n):
 
 
 def soft_attack(clf, sample, epsilon, var_x):
-    core_constraints, soft_constraints, c_weights, orig_weights, all_c = create_all_smt(
-        clf, var_x, sample, epsilon
-    )
+    (
+        core_constraints,
+        soft_constraints,
+        c_weights,
+        orig_weights,
+        all_c,
+    ) = create_all_smt(clf, var_x, sample, epsilon)
     s = Optimize()
     s.set("timeout", 5000)
     for ci in core_constraints:
@@ -753,19 +785,23 @@ def soft_attack(clf, sample, epsilon, var_x):
 
 
 def hard_attack(clf, sample, epsilon, var_x, nbits):
-    core_constraints, soft_constraints, c_weights, orig_weights, all_c = create_all_smt(
-        clf, var_x, sample, epsilon
-    )
+    (
+        core_constraints,
+        soft_constraints,
+        c_weights,
+        orig_weights,
+        all_c,
+    ) = create_all_smt(clf, var_x, sample, epsilon)
 
     dump = clf.get_booster().get_dump(dump_format="json")
     ntrees = len(dump)
     new_nbits = int(np.ceil(np.log2(ntrees)) + nbits)
-    
+
     list_val_, list_c_ = list_c_val(c_weights, nbits, new_nbits)
     sum_constp, seq_nump = sum_loop_pos(list_val_, list_c_, new_nbits)
     sum_constn, seq_numn = sum_loop_neg(list_val_, list_c_, new_nbits)
-    
-    w = np.asarray([v for k,v in c_weights.items()])
+
+    w = np.asarray([v for k, v in c_weights.items()])
     const_class = const_larger(seq_nump, seq_numn, new_nbits)
 
     s = Solver()
@@ -776,10 +812,10 @@ def hard_attack(clf, sample, epsilon, var_x, nbits):
 
     for ci in sum_constp:
         s.add(ci)
-    
+
     for ci in sum_constn:
         s.add(ci)
-        
+
     for ci in const_class:
         s.add(ci)
 
@@ -791,7 +827,9 @@ def hard_attack(clf, sample, epsilon, var_x, nbits):
 
 
 def get_x_adv(solver, var_x, sample):
-    x_adv = pd.DataFrame(({k[2:-1]: [solver.model()[v]] for k, v in var_x.items()}))
+    x_adv = pd.DataFrame(
+        ({k[2:-1]: [solver.model()[v]] for k, v in var_x.items()})
+    )
     x_adv_sample, compare = create_adv_sample(x_adv, sample)
     return x_adv, x_adv_sample, compare
 
@@ -811,7 +849,9 @@ def create_adv_sample(x_adv, sample):
     bound_i = []
 
     for i in range(num_features):
-        col_i = np.asarray([ci for ci in columns if int(ci.split("_")[0]) == i])
+        col_i = np.asarray(
+            [ci for ci in columns if int(ci.split("_")[0]) == i]
+        )
         col_i_false = col_i[np.where(x_adv[col_i].values == False)[1]]
         col_i_true = col_i[np.where(x_adv[col_i].values == True)[1]]
 
@@ -861,4 +901,3 @@ def create_adv_sample(x_adv, sample):
     compare["bound"] = bound_i
 
     return x_adv_num, compare
-
