@@ -703,7 +703,10 @@ def sum_loop_neg(xin, c_in, n):
 
 
 def const_larger(seq_nump, seq_numn, n):
-
+    """ we add negative numbers together and positive numbers together
+    here we compare if the absolute value of the positive numbers is larger
+    than the negative one => is the output larger than zero or not?
+    """
     const = []
     const_or = [
         And(Bool(f"dsump_{seq_nump}(1)"), Not(Bool(f"dsumn_{seq_nump}(1)")))

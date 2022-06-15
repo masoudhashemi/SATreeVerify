@@ -284,6 +284,8 @@ def create_smt_regions(dict_boundaries, var_x, tree_num):
 
 
 def find_linf_tree_intersect(tree, sample, epsilon):
+    """ Find the box decisions intersecting with the epsilon ball.
+    """
     leaves_0, min_corners_0, max_corners_0 = leaf_boxes(tree.tree_)
 
     maxi = []
@@ -309,6 +311,8 @@ def find_linf_tree_intersect(tree, sample, epsilon):
 
 
 def get_output(opt, c_weights):
+    """ Get the value of the variables after SAT is solved.
+    """
     opt_vlues = {str(v): opt.model()[v] for v in opt.model() if "c" in str(v)}
     adv_weights = {
         ci: c_weights[ci]
@@ -405,6 +409,8 @@ def list_c_val(c_weights, nbits):
 
 
 def sum_loop(xin, c_, n):
+    """ Compute summation with SAT
+    """
     x_ = copy.deepcopy(xin)
     for xi in x_:
         while len(xi) < n:
@@ -489,9 +495,10 @@ def get_value(model, seq_num, nbits, ntrees):
 
 
 def const_larger(nbits, ntrees, seq_num):
-
+    """ Checks if the prediction value is larger than 0.5
+    """
     new_nbits = int(np.ceil(np.log2(ntrees)) + nbits)
-    vhalf = (2 ** (nbits) - 1) * ntrees / 2
+    vhalf = (2 ** (nbits) - 1) * ntrees / 2 # 0.5 equivalent to be compared with
     vb = [int(bi) for bi in "{0:b}".format(int(vhalf))]
 
     while len(vb) < new_nbits:
