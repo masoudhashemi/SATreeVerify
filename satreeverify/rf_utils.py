@@ -76,7 +76,6 @@ def leaf_boxes(tree, x_min=-1e9, x_max=1e9):
 
     n_leaves = len(leaves)
 
-    # Make this sparse in the future, if necessary
     max_corners = np.ones((n_leaves, n_features)) * x_max
     min_corners = np.ones((n_leaves, n_features)) * x_min
 
@@ -85,9 +84,6 @@ def leaf_boxes(tree, x_min=-1e9, x_max=1e9):
         for node, step in path:
             feat_id = feature[node]
             thresh = threshold[node]
-
-            # left, x <= t; r=t, l=-inf
-            # right, x > t; r=inf, l=t
 
             if step == "left":
                 max_corners[i, feat_id] = thresh
@@ -353,7 +349,7 @@ def create_all_smt(clf, var_x, sample, epsilon, lower_bound=False):
             all_c.append(f"c({i},{ci})")
 
     remaining_c = set(all_c).difference(remove_c)
-    # print("included c's: ", remaining_c)
+    
     if len(remaining_c) == 0:
         print("No intersecting box exist.")
         return None, None, c_weights, all_c

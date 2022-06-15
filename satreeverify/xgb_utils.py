@@ -1,8 +1,6 @@
 import json
-from collections import OrderedDict
 
 import numpy as np
-import pandas as pd
 from z3 import *
 
 from satreeverify.utils import box_intersection, get_varx_i
@@ -70,7 +68,6 @@ def get_ens_thresh(dump):
 
 def leaf_boxes(tree, num_feats):
     """Finds the boundaries and values of the leaves in xgboost.
-    (from FactorForest)
     """
     minms, maxms, vals, nodeids = [], [], [], []
     box_min = XMIN * np.ones(num_feats)
