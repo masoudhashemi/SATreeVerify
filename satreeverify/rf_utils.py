@@ -353,7 +353,7 @@ def create_all_smt(clf, var_x, sample, epsilon, lower_bound=False):
             all_c.append(f"c({i},{ci})")
 
     remaining_c = set(all_c).difference(remove_c)
-    
+
     if len(remaining_c) == 0:
         print("No intersecting box exist.")
         return None, None, c_weights, all_c
@@ -498,7 +498,9 @@ def const_larger(nbits, ntrees, seq_num):
     """ Checks if the prediction value is larger than 0.5
     """
     new_nbits = int(np.ceil(np.log2(ntrees)) + nbits)
-    vhalf = (2 ** (nbits) - 1) * ntrees / 2 # 0.5 equivalent to be compared with
+    vhalf = (
+        (2 ** (nbits) - 1) * ntrees / 2
+    )  # 0.5 equivalent to be compared with
     vb = [int(bi) for bi in "{0:b}".format(int(vhalf))]
 
     while len(vb) < new_nbits:

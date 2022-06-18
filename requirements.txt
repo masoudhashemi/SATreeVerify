@@ -1,5 +1,6 @@
-numpy
-pandas
-z3-solver
-scikit-learn
-xgboost
+numpy==1.19.5
+pandas==1.4.2
+scikit_learn==1.1.1
+xgboost==1.3.3
+z3==0.2.0
+z3_solver==4.8.17.0
