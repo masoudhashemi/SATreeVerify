@@ -13,3 +13,5 @@ Check `examples` folder for examples of using the code.
 - For each input, clauses are added to the model to restrict the correct clauses to the ones overlapping with the epsilon ball around the input.
 - Some auxiliary clauses are also added to help the solver to prune the cluases. For instance if the input is less than x all the clauses that are greater than x are pruned.
 - Using these cluases two methods are used to find the solutions: 1) soft solver, which uses MAX-SAT that assigns the values that maximize the value of the satisfied cluases. 2) hard solver, which uses SAT. To be able to solve SAT, we need to implement the ensembling logic, i.e., we implement the summation of the trees and in XGBoost we compute the positive and negative weights of the trees.
+
+In general, the hard solver is slower but its results are closer to the original input (better adversarial examples).
